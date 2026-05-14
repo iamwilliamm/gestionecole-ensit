@@ -1,0 +1,206 @@
+================================================================================
+           MODÈLE CONCEPTUEL DE DONNÉES (MCD)
+     Gestion des Inscriptions et Paiements - École
+================================================================================
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                              ENTITÉS                                        ║
+╠══════════════════════════════════════════════════════════════════════════════╣
+║                                                                              ║
+║  ┌─────────────────┐   ┌─────────────────┐   ┌─────────────────┐             ║
+║  │    UTILISATEUR  │   │    ÉTUDIANT     │   │    FILIÈRE     │             ║
+║  ├─────────────────┤   ├─────────────────┤   ├─────────────────┤             ║
+║  │ id_utilisateur  │   │ id_etudiant     │   │ id_filiere     │             ║
+║  │ login           │───││ nom            │   │ libelle        │             ║
+║  │ mot_de_passe    │   │ prenom         │   │ description    │             ║
+║  │ role            │   │ date_naissance │   └─────────────────┘             ║
+║  │ nom_complet     │   │ lieu_naissance │              │                   ║
+║  │ date_creation   │   │ sexe           │              │                   ║
+║  └─────────────────┘   │ email          │              │                   ║
+║          │            │ telephone      │              │                   ║
+║          │            │ adresse        │              │                   ║
+║          │            │ photo          │              │                   ║
+║          │            │ id_filiere     │◄─────────────┤                   ║
+║          │            │ date_inscription│             │                   ║
+║          │            └─────────────────┘             │                   ║
+║          │                      │                      │                   ║
+║          │                      │                      │                   ║
+║          ▼                      ▼                      ▼                   ║
+║  ┌─────────────────────────────────────────────────────────────────┐        ║
+║  │                    RÉINSCRIPTION                                │        ║
+║  ├─────────────────────────────────────────────────────────────────┤        ║
+║  │ id_reinscription     (PK)                                        │        ║
+║  │ id_etudiant          (FK)                                        │        ║
+║  │ annee_scolaire       ex: 2025-2026                              │        ║
+║  │ niveau               (1 à 5)                                    │        ║
+║  │ date_reinscription                                          │        ║
+║  │ observations                                                │        ║
+║  └─────────────────────────────────────────────────────────────────┘        ║
+║                                    │                                        ║
+║                                    │                                        ║
+║                                    ▼                                        ║
+║  ┌─────────────────────────────────────────────────────────────────┐        ║
+║  │                      PAIEMENT                                   │        ║
+║  ├─────────────────────────────────────────────────────────────────┤        ║
+║  │ id_paiement        (PK)                                         │        ║
+║  │ id_etudiant        (FK)                                         │        ║
+║  │ id_reinscription   (FK)  optionnel                              │        ║
+║  │ montant            DECIMAL(10,2)                               │        ║
+║  │ date_paiement                                               │        ║
+║  │ type_frais         (inscription, materiel, examen, etc.)      │        ║
+║  │ mode_paiement      (espèces, virement, cheque)                │        ║
+║  │ reference           N° reçu / transaction                      │        ║
+║  │ statut             (partiel, complet, en_attente)            │        ║
+║  │ observations                                               │        ║
+║  └─────────────────────────────────────────────────────────────────┘        ║
+║                                                                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+
+================================================================================
+                         ASSOCIATIONS (CARDINALITÉS)
+================================================================================
+
+  UTILISATEUR ────────── 1,N ─┐
+       │                      │
+       │  (gère)              │
+       ▼                      ▼
+
+  ┌─────────────────────────────────────────────────────────────────┐
+  │                      ASSOCIATION 1                            │
+  │  "Effectue"                                                    │
+  │  - Un UTILISATEUR peut gérer plusieurs ÉTUDIANTS (1,N)         │
+  │  - Un ÉTUDIANT est géré par un UTILISATEUR (1,1)             │
+  └─────────────────────────────────────────────────────────────────┘
+
+                               │
+                               ▼
+
+  ÉTUDIANT ────────── 0,N ─┐
+       │                   │
+       │  (s'inscrit)      │
+       │                   │
+       │  (se réinscrit)   │
+       ▼                   ▼
+
+  ┌─────────────────────────────────────────────────────────────────┐
+  │                      ASSOCIATION 2                            │
+  │  "S'inscrit / Se réinscrit"                                    │
+  │  - Un ÉTUDIANT peut avoir plusieurs RÉINSCRIPTIONS (0,N)      │
+  │  - Chaque RÉINSCRIPTION concerne un seul ÉTUDIANT (1,1)     │
+  └─────────────────────────────────────────────────────────────────┘
+
+
+  ÉTUDIANT ────────── 1,1 ─┐
+       │                   │
+       │  (appartient)     │
+       ▼                   ▼
+
+  ┌─────────────────────────────────────────────────────────────────┐
+  │                      ASSOCIATION 3                            │
+  │  "Appartient à"                                                │
+  │  - Un ÉTUDIANT appartient à une FILIÈRE (1,1)                │
+  │  - Une FILIÈRE peut avoir plusieurs ÉTUDIANTS (0,N)          │
+  └─────────────────────────────────────────────────────────────────┘
+
+
+  ÉTUDIANT ────────── 0,N ─┐
+       │                   │
+       │  (paie)           │
+       ▼                   ▼
+
+  ┌─────────────────────────────────────────────────────────────────┐
+  │                      ASSOCIATION 4                            │
+  │  "Paie"                                                        │
+  │  - Un ÉTUDIANT peut avoir plusieurs PAIEMENTS (0,N)           │
+  │  - Chaque PAIEMENT concerne un seul ÉTUDIANT (1,1)          │
+  └─────────────────────────────────────────────────────────────────┘
+
+
+  RÉINSCRIPTION ────── 0,N ─┐
+       │                   │
+       │  (génère)         │
+       ▼                   ▼
+
+  ┌─────────────────────────────────────────────────────────────────┐
+  │                      ASSOCIATION 5                            │
+  │  "Génère"                                                      │
+  │  - Une RÉINSCRIPTION peut générer plusieurs PAIEMENTS (0,N)  │
+  │  - Un PAIEMENT est lié à une RÉINSCRIPTION (0,1)            │
+  └─────────────────────────────────────────────────────────────────┘
+
+
+================================================================================
+                              DICTIONNAIRE DES DONNÉES
+================================================================================
+
+┌─────────────────┬───────────────────┬────────────────────────────────────────┐
+│    ENTITÉ       │     ATTRIBUT      │              DESCRIPTION                │
+├─────────────────┼───────────────────┼────────────────────────────────────────┤
+│ UTILISATEUR     │ id_utilisateur    │ Clé primaire, Auto-incrémenté         │
+│                 │ login             │ Identifiant de connexion (unique)     │
+│                 │ mot_de_passe      │ Mot de passe (hashé)                   │
+│                 │ role              │ 'administrateur' ou 'personnel'        │
+│                 │ nom_complet       │ Nom et prénom de l'utilisateur         │
+│                 │ date_creation     │ Date de création du compte             │
+├─────────────────┼───────────────────┼────────────────────────────────────────┤
+│ FILIÈRE         │ id_filiere        │ Clé primaire, Auto-incrémenté         │
+│                 │ libelle           │ Nom de la filière (ex: INFO, GESTION)  │
+│                 │ description       │ Description de la filière              │
+├─────────────────┼───────────────────┼────────────────────────────────────────┤
+│ ÉTUDIANT        │ id_etudiant       │ Clé primaire, Auto-incrémenté         │
+│                 │ nom               │ Nom de l'étudiant                      │
+│                 │ prenom            │ Prénom de l'étudiant                    │
+│                 │ date_naissance    │ Date de naissance                      │
+│                 │ lieu_naissance    │ Lieu de naissance                      │
+│                 │ sexe              │ 'M' ou 'F'                              │
+│                 │ email             │ Adresse email                           │
+│                 │ telephone         │ Numéro de téléphone                     │
+│                 │ adresse           │ Adresse complète                        │
+│                 │ photo             │ Chemin de la photo de profil           │
+│                 │ id_filiere        │ Clé étrangère vers FILIÈRE             │
+│                 │ date_inscription  │ Date de première inscription           │
+│                 │ numero_inscription│ Numéro unique d'inscription            │
+├─────────────────┼───────────────────┼────────────────────────────────────────┤
+│ RÉINSCRIPTION   │ id_reinscription  │ Clé primaire, Auto-incrémenté         │
+│                 │ id_etudiant       │ Clé étrangère vers ÉTUDIANT            │
+│                 │ annee_scolaire    │ Année scolaire (ex: 2025-2026)         │
+│                 │ niveau            │ Niveau (1, 2, 3, 4 ou 5)               │
+│                 │ date_reinscription│ Date de la réinscription               │
+│                 │ observations     │ Observations optionnelles               │
+├─────────────────┼───────────────────┼────────────────────────────────────────┤
+│ PAIEMENT        │ id_paiement       │ Clé primaire, Auto-incrémenté         │
+│                 │ id_etudiant       │ Clé étrangère vers ÉTUDIANT            │
+│                 │ id_reinscription  │ Clé étrangère vers RÉINSCRIPTION       │
+│                 │ montant           │ Montant payé                           │
+│                 │ date_paiement     │ Date du paiement                       │
+│                 │ type_frais        │ Type de frais                          │
+│                 │ mode_paiement     │ Mode de paiement                       │
+│                 │ reference        │ Numéro de reçu/transaction             │
+│                 │ statut            │ 'partiel', 'complet', 'en_attente'     │
+│                 │ observations     │ Observations optionnelles               │
+└─────────────────┴───────────────────┴────────────────────────────────────────┘
+
+
+================================================================================
+                              NOTES ET REMARQUES
+================================================================================
+
+1. RELATIONS HRÉNIQUES:
+   - UTILISATEUR → ÉTUDIANT : Un utilisateur crée/modifie un étudiant
+   - Un journal des actions est prévu (inscription dans une table LOG)
+
+2. CONTRAINTES MÉTIER:
+   - Le niveau d'un étudiant doit être entre 1 et 5
+   - Un étudiant ne peut avoir qu'une seule inscription par année scolaire
+   - Le montant total des paiements ne peut pas dépasser le frais de scolarité
+
+3. GESTION DES IMPAYÉS:
+   - Les étudiants avec statut "en_attente" ou dont la somme des paiements
+     est inférieure aux frais sont considéré comme impayés
+
+4. HISTORIQUE:
+   - Toutes les modifications sont journalisées (table JOURNAL)
+   - Les réinscriptions conservent l'historique des niveaux
+
+================================================================================

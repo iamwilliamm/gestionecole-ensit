@@ -1,0 +1,260 @@
+================================================================================
+               DOCUMENTATION DU PROJET - Gestion École VB.NET
+================================================================================
+
+================================================================================
+1. PRÉSENTATION DU PROJET
+================================================================================
+
+Application Windows Forms développée en VB.NET pour gérer les inscriptions 
+et paiements des étudiants dans une école.
+
+Technologies utilisées:
+- Langage: VB.NET (.NET 7.0)
+- Base de données: Access (via OleDb)
+- Interface: Windows Forms
+- Export Excel: NPOI
+
+================================================================================
+2. STRUCTURE DU PROJET
+================================================================================
+
+GestionEcole/
+├── GestionEcole.vbproj          # Fichier de projet
+├── App.config                   # Configuration
+├── Program.vb                   # Point d'entrée
+├── DataAccess/
+│   ├── Connexion.vb            # Gestion de la connexion BD
+│   └── DAL.vb                   # Couche d'accès aux données
+├── Models/
+│   └── UtilisateurConnecte.vb  # Gestion session utilisateur
+├── Forms/
+│   ├── LoginForm.vb             # Formulaire de connexion
+│   ├── MainForm.vb              # Menu principal
+│   ├── EtudiantForm.vb          # Gestion des étudiants
+│   ├── FiliereForm.vb           # Gestion des filières
+│   ├── ReinscriptionForm.vb     # Gestion des réinscriptions
+│   ├── PaiementForm.vb          # Gestion des paiements
+│   ├── RapportForm.vb           # Rapports et export
+│   ├── UtilisateurForm.vb       # Gestion des utilisateurs
+│   └── JournalForm.vb           # Journal des actions
+└── bin/Debug/                   # Exécutable
+
+================================================================================
+3. BASE DE DONNÉES
+================================================================================
+
+Tables créées automatiquement au premier lancement:
+
+UTILISATEUR
+- id_utilisateur (PK, AutoIncrement)
+- login (Texte, Unique)
+- mot_de_passe (Texte)
+- role (Texte: administrateur/personnel)
+- nom_complet (Texte)
+- date_creation (DateTime)
+
+FILIERE
+- id_filiere (PK, AutoIncrement)
+- libelle (Texte)
+- description (Mémo)
+
+ETUDIANT
+- id_etudiant (PK, AutoIncrement)
+- nom (Texte)
+- prenom (Texte)
+- date_naissance (Date)
+- lieu_naissance (Texte)
+- sexe (Texte: M/F)
+- email (Texte)
+- telephone (Texte)
+- adresse (Mémo)
+- photo (Mémo)
+- numero_inscription (Texte, Unique)
+- id_filiere (FK)
+- date_inscription (DateTime)
+
+REINSCRIPTION
+- id_reinscription (PK, AutoIncrement)
+- id_etudiant (FK)
+- annee_scolaire (Texte)
+- niveau (Integer: 1-5)
+- date_reinscription (DateTime)
+- observations (Mémo)
+
+PAIEMENT
+- id_paiement (PK, AutoIncrement)
+- id_etudiant (FK)
+- id_reinscription (FK, Optionnel)
+- montant (Decimal)
+- date_paiement (DateTime)
+- type_frais (Texte)
+- mode_paiement (Texte)
+- reference (Texte)
+- statut (Texte: partiel/complet/en_attente)
+- observations (Mémo)
+
+JOURNAL
+- id (PK, AutoIncrement)
+- id_utilisateur (FK)
+- action (Texte)
+- date_action (DateTime)
+- description (Mémo)
+
+================================================================================
+4. FONCTIONNALITÉS
+================================================================================
+
+4.1 AUTHENTIFICATION
+- Login/Mot de passe
+- Rôles: administrateur, personnel
+- Journalisation des connexions
+
+4.2 GESTION DES ÉTUDIANTS
+- CRUD complet (Ajouter, Modifier, Supprimer, Lister)
+- Recherche par nom/prénom/numéro inscription
+- Filtrage par filière et niveau
+- Gestion des photos
+
+4.3 GESTION DES FILIÈRES
+- CRUD complet
+- Liste des filières disponibles
+
+4.4 GESTION DES RÉINSCRIPTIONS
+- Mise à jour du niveau (1-5)
+- Historique des réinscriptions
+- Année scolaire automatique
+
+4.5 GESTION DES PAIEMENTS
+- Enregistrement des paiements
+- Types de frais: Inscription, Scolarité, Matériel, Examen...
+- Modes: Espèces, Virement, Chèque, Carte
+- Statuts: partiel, complet, en_attente
+- Visualisation des impayés
+
+4.6 RECHERCHE ET FILTRAGE
+- Recherche multicritère
+- Filtrage par filière/niveau
+- Tri dans les DataGridView
+
+4.7 RAPPORTS ET EXPORT
+- Liste des étudiants
+- Liste des paiements
+- Liste des impayés
+- Export Excel (.xlsx)
+
+4.8 JOURNALISATION
+- Enregistrement de toutes les actions
+- Table JOURNAL avec utilisateur, action, date, description
+
+================================================================================
+5. COMMENT UTILISER
+================================================================================
+
+5.1 LANCEMENT
+- Exécuter GestionEcole.exe
+- Au premier lancement, la base de données est créée automatiquement
+
+5.2 COMPTES PAR DÉFAUT
+- Login: admin / Mot de passe: 12345 (administrateur)
+- Login: secretariat / Mot de passe: 12345 (personnel)
+
+5.3 NAVIGATION
+- Menu latéral avec toutes les fonctionnalités
+- Déconnexion disponible
+
+================================================================================
+6. COUCHE D'ACCÈS AUX DONNÉES (DAL)
+================================================================================
+
+La classe DAL contient des méthodes statiques pour chaque table:
+
+DAL.UtilisateurDAL
+- Authentifier(login, motDePasse)
+- GetAll()
+- Ajouter(...)
+- Modifier(...)
+- Supprimer(id)
+
+DAL.FiliereDAL
+- GetAll()
+- GetById(id)
+- Ajouter(libelle, description)
+- Modifier(id, libelle, description)
+- Supprimer(id)
+
+DAL.EtudiantDAL
+- GetAll()
+- GetById(id)
+- Rechercher(terme, idFiliere, niveau)
+- Ajouter(...)
+- Modifier(id, ...)
+- Supprimer(id)
+
+DAL.ReinscriptionDAL
+- GetAll()
+- GetByEtudiant(idEtudiant)
+- GetDerniereNiveau(idEtudiant)
+- Ajouter(idEtudiant, anneeScolaire, niveau, observations)
+- Supprimer(id)
+
+DAL.PaiementDAL
+- GetAll()
+- GetByEtudiant(idEtudiant)
+- GetImpayes()
+- Ajouter(...)
+- Modifier(id, ...)
+- Supprimer(id)
+
+DAL.JournalDAL
+- EnregistrerAction(idUtilisateur, action, description)
+- GetAll()
+
+================================================================================
+7. NOTES TECHNIQUES
+================================================================================
+
+- La base de données Access est créée automatiquement dans le répertoire 
+  de l'exécutable au premier lancement
+- Les photos sont stockées sous forme de chemin de fichier
+- Les mots de passe sont stockés en clair (pour un projet pédagogique)
+- Pour un usage production, il faudrait:
+  * Hasher les mots de passe
+  * Utiliser SQL Server au lieu d'Access
+  * Ajouter des validations plus strictes
+
+================================================================================
+8. COMPILATION ET EXÉCUTION
+================================================================================
+
+Pour compiler:
+  cd source/repos/GestionEcole
+  dotnet build
+
+Pour exécuter:
+  dotnet run
+
+Ou exécuter directement:
+  bin/Debug/net7.0-windows/GestionEcole.exe
+
+================================================================================
+                           Fin de la documentation
+================================================================================
+
+
+Comment faire :
+1. Ouvrir le projet dans Visual Studio
+   - Ouvre Visual Studio
+   - Fichier → Ouvrir → Projet/Solution
+   - Sélectionne le fichier : C:\Users\hp\source\repos\GestionEcole\GestionEcole.vbproj
+2. Lancer l'application
+   - Appuie sur F5 ou clique sur le bouton "Démarrer" (▶️)
+   - L'application va se compiler et s'exécuter
+3. Premier lancement
+   - Au premier lancement, la base de données Access (GestionEcole.accdb) sera créée automatiquement dans le dossier bin\Debug\net7.0-windows\
+Comptes de test
+- admin / 12345 (accès complet)
+- secretariat / 12345 (accès limité)
+L'application est prête à être utilisée directement !
+
+

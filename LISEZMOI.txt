@@ -1,0 +1,236 @@
+================================================================================
+               PROJET GESTION ECOLE - ENSIT
+               Application de Gestion des Inscriptions et Paiements
+================================================================================
+
+Date de création: 20/02/2026
+Version: 2.0 Professionnelle
+
+================================================================================
+                         CONTENU DU PROJET
+================================================================================
+
+Ce fichier ZIP contient le projet complet GestionEcole avec:
+
+✅ Architecture professionnelle en 5 couches
+✅ Design moderne avec thème ENSIT (Bleu marine & Or)
+✅ Formulaire de connexion modernisé avec logo
+✅ Tableau de bord avec graphiques et statistiques
+✅ Génération de PDF (reçus de paiement)
+✅ Export Excel
+✅ Sécurité renforcée (hashage SHA256)
+✅ Validation des données
+✅ Journal d'activités
+
+================================================================================
+                         INSTALLATION ET UTILISATION
+================================================================================
+
+PRÉREQUIS:
+-----------
+1. Windows 10 ou 11
+2. Visual Studio 2022 (Communauté, Professionnel ou Enterprise)
+   → Avec la charge de travail "Développement .NET Desktop"
+3. .NET 7.0 SDK (installé avec Visual Studio)
+
+INSTALLATION:
+-------------
+1. Extraire ce fichier ZIP dans un dossier de votre choix
+   Exemple: C:\Users\VotreNom\Documents\Projets\
+
+2. Ouvrir Visual Studio 2022
+
+3. Fichier > Ouvrir > Projet/Solution
+   Naviguer vers: GestionEcole\GestionEcole.vbproj
+   OU
+   Naviguer vers: GestionEcole\GestionEcole.sln (si disponible)
+
+4. Attendre que Visual Studio charge le projet
+   → Les packages NuGet se restaureront automatiquement
+   → Si ce n'est pas le cas: clic droit sur la solution > Restaurer les packages NuGet
+
+5. Appuyer sur F5 ou cliquer sur le bouton "Démarrer" pour exécuter
+
+================================================================================
+                         IDENTIFIANTS DE CONNEXION
+================================================================================
+
+Au démarrage, utilisez ces identifiants pour tester:
+
+ADMINISTRATEUR (accès complet):
+  Login: admin
+  Mot de passe: 12345
+  
+PERSONNEL (accès limité):
+  Login: secretariat
+  Mot de passe: 12345
+
+================================================================================
+                         STRUCTURE DU PROJET
+================================================================================
+
+GestionEcole/
+├── GestionEcole.vbproj          (Fichier projet principal)
+├── Program.vb                   (Point d'entrée de l'application)
+│
+├── Business/                    (Logique métier)
+│   └── Services.vb              (Validation, calculs, règles métier)
+│
+├── DataAccess/                  (Accès aux données)
+│   ├── Connexion.vb             (Connexion base de données)
+│   └── DAL.vb                   (CRUD pour toutes les entités)
+│
+├── Data/                        (Base de données)
+│   └── GestionEcole.accdb       (Base Access - créée automatiquement)
+│
+├── Forms/                       (Interface utilisateur)
+│   ├── LoginForm.vb             (Connexion - DESIGN MODERNISÉ)
+│   ├── MainForm.vb              (Menu principal - DESIGN MODERNISÉ)
+│   ├── DashboardForm.vb         (Tableau de bord - NOUVEAU)
+│   ├── EtudiantForm.vb          (Gestion des étudiants)
+│   ├── FiliereForm.vb           (Gestion des filières)
+│   ├── PaiementForm.vb          (Gestion des paiements)
+│   ├── ReinscriptionForm.vb     (Gestion des réinscriptions)
+│   ├── RapportForm.vb           (Rapports et exports)
+│   ├── JournalForm.vb           (Journal d'activités)
+│   └── UtilisateurForm.vb       (Gestion des utilisateurs)
+│
+├── Helpers/                     (Utilitaires)
+│   ├── Helpers.vb               (Sécurité, validation, formatage)
+│   └── PDFGenerator.vb          (Génération PDF - NOUVEAU)
+│
+├── Models/                      (Modèles de données)
+│   ├── UtilisateurConnecte.vb   (Gestion de la session)
+│   └── Models.vb                (Classes métier enrichies)
+│
+├── Themes/                      (Styles visuels)
+│   └── ENSITTheme.vb            (Couleurs et styles ENSIT)
+│
+└── Documentation/               (Guides)
+    ├── DOCUMENTATION_TECHNIQUE_COMPLETE.txt
+    ├── DOCUMENTATION_AMELIORATIONS.txt
+    └── IMPLEMENTATION_COMPLETE.txt
+
+================================================================================
+                         FONCTIONNALITÉS PRINCIPALES
+================================================================================
+
+1. GESTION DES ÉTUDIANTS
+   - Ajouter, modifier, supprimer des étudiants
+   - Recherche multi-critères
+   - Upload de photo de profil
+   - Génération automatique des numéros d'inscription
+
+2. GESTION DES RÉINSCRIPTIONS
+   - Suivi annuel des niveaux (1ère à 5ème année)
+   - Historique complet
+   - Vérification des prérequis
+
+3. GESTION DES PAIEMENTS
+   - Enregistrement des paiements
+   - Types de frais: inscription, scolarité, matériel, examen
+   - Modes de paiement: espèces, virement, chèque
+   - Suivi des statuts: complet, partiel, en attente
+   - Génération de reçus PDF
+
+4. TABLEAU DE BORD (NOUVEAU)
+   - KPI visuels (total étudiants, paiements, montants)
+   - Graphiques statistiques
+   - Répartition par filière
+   - Statut des paiements
+
+5. RAPPORTS
+   - Liste des étudiants filtrable
+   - Liste des impayés
+   - Export Excel
+   - Export PDF
+
+6. SÉCURITÉ
+   - Authentification par login/mot de passe
+   - Hashage SHA256 des mots de passe
+   - Deux niveaux d'accès: Administrateur et Personnel
+   - Journal de toutes les actions
+
+================================================================================
+                         TECHNOLOGIES UTILISÉES
+================================================================================
+
+- Langage: VB.NET
+- Framework: .NET 7.0
+- Interface: Windows Forms
+- Base de données: Microsoft Access (OLEDB)
+- Export Excel: NPOI 2.7.5
+- Génération PDF: PdfSharpCore
+- Graphiques: System.Windows.Forms.DataVisualization
+
+================================================================================
+                         RÉSOLUTION DES PROBLÈMES
+================================================================================
+
+PROBLÈME: "Les packages NuGet ne se restaurent pas"
+SOLUTION:
+  1. Outils > Gestionnaire de package NuGet > Console du gestionnaire de package
+  2. Taper: Update-Package -reinstall
+  3. Ou restaurer manuellement via: clic droit sur la solution > Restaurer les packages NuGet
+
+PROBLÈME: "Erreur de compilation"
+SOLUTION:
+  1. Build > Nettoyer la solution
+  2. Build > Reconstruire la solution
+  3. Redémarrer Visual Studio
+
+PROBLÈME: "Base de données introuvable"
+SOLUTION:
+  - La base de données se crée automatiquement au premier démarrage
+  - Vérifier les droits d'écriture dans le dossier du projet
+  - Vérifier que Microsoft Access Database Engine est installé
+
+PROBLÈME: "L'application ne démarre pas"
+SOLUTION:
+  1. Vérifier que .NET 7.0 est installé
+  2. Vérifier que Visual Studio est à jour
+  3. Réinstaller les packages NuGet
+
+================================================================================
+                         NOTES IMPORTANTES
+================================================================================
+
+BASE DE DONNÉES:
+- Le fichier GestionEcole.accdb est créé automatiquement au premier lancement
+- Emplacement: dans le dossier Data\ du projet
+- Données de test pré-enregistrées: 2 utilisateurs, 5 filières
+
+SÉCURITÉ:
+- Les mots de passe sont hashés avec SHA256
+- Ne jamais modifier directement la base de données
+- Toujours utiliser l'interface pour les modifications
+
+SAUVEGARDE:
+- Il est recommandé de sauvegarder régulièrement le fichier
+  GestionEcole.accdb pour ne pas perdre les données
+
+================================================================================
+                         CONTACT ET SUPPORT
+================================================================================
+
+Pour toute question ou problème:
+1. Consulter les fichiers dans le dossier Documentation/
+2. Vérifier les commentaires dans le code source
+3. Relire ce README
+
+================================================================================
+                         LICENCE
+================================================================================
+
+Projet développé pour:
+École Nouvelle Supérieure d'Ingénieurs et de Technologie (ENSIT)
+
+© 2025-2026 ENSIT. Tous droits réservés.
+Ce projet est destiné à un usage éducatif et professionnel.
+
+================================================================================
+                                    FIN
+================================================================================
+
+Merci d'utiliser GestionEcole!
+Pour toute suggestion ou amélioration, n'hésitez pas à nous contacter.

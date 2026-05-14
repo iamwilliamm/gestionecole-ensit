@@ -1,0 +1,756 @@
+================================================================================
+          DOCUMENTATION TECHNIQUE - COMMENT J'AI CODÉ CE PROJET
+               GestionEcole - ENSIT (École de Génie et Technologie)
+================================================================================
+
+Date de création: 19/02/2026
+Auteur: Claude (Assistant IA)
+Version: 1.0
+
+================================================================================
+                    SOMMAIRE
+================================================================================
+
+1. INTRODUCTION ET ARCHITECTURE
+2. COUCHE D'ACCÈS AUX DONNÉES (DataAccess)
+3. COUCHE MÉTIER (Business)
+4. MODÈLES DE DONNÉES (Models)
+5. UTILITAIRES (Helpers)
+6. INTERFACE UTILISATEUR (Forms)
+7. SÉCURITÉ ET VALIDATION
+8. EXPORTS ET RAPPORTS
+9. TECHNIQUES AVANCÉES
+
+================================================================================
+            1. INTRODUCTION ET ARCHITECTURE
+================================================================================
+
+1.1 CHOIX DE L'ARCHITECTURE EN COUCHES
+--------------------------------------
+
+J'ai choisi une architecture en 5 couches pour séparer les responsabilités:
+
+Présentation (Forms)
+        ↓
+   Business (Services)
+        ↓
+    Models (Données)
+        ↓
+DataAccess (DAL)
+        ↓
+   Base de données
+
+AVANTAGES:
+✓ Maintenabilité: Chaque couche peut être modifiée sans impacter les autres
+✓ Testabilité: On peut tester chaque couche indépendamment
+✓ Réutilisabilité: Les classes métier peuvent être réutilisées
+✓ Sécurité: La logique métier est protégée de l'interface
+
+1.2 CHOIX TECHNOLOGIQUES
+------------------------
+
+Langage: VB.NET
+  → Choisi car c'est un langage verbose (parle beaucoup) et facile à lire
+  → Parfait pour les débutants et les projets pédagogiques
+  → Intégration native avec Windows Forms
+
+Framework: .NET 7.0
+  → Version récente mais stable
+  → Support long terme
+  → Compatible Windows Forms
+
+Base de données: Microsoft Access (OLEDB)
+  → Portable (fichier unique .accdb)
+  → Ne nécessite pas d'installation serveur
+  → Parfait pour un projet pédagogique local
+  → Compatible avec les requêtes SQL standard
+
+Bibliothèques NuGet:
+  → NPOI 2.7.5: Pour exporter vers Excel sans avoir besoin d'Excel installé
+  → System.Data.OleDb: Pour se connecter à Access
+
+================================================================================
+            2. COUCHE D'ACCÈS AUX DONNÉES (DataAccess)
+================================================================================
+
+2.1 CLASSE CONNEXION (Connexion.vb)
+-----------------------------------
+
+OBJECTIF: Gérer la connexion à la base de données
+
+CONCEPT CLÉ: Singleton Pattern (Instance unique)
+-----------------------------------------------
+La classe utilise des membres Shared (partagés) pour garantir qu'il n'y a 
+qu'une seule connexion active à la fois.
+
+CODE EXPLIQUÉ:
+```vb
+Private Shared _chaineConnexion As String = ""
+```
+Le mot-clé "Shared" signifie que cette variable appartient à la classe
+et non à une instance. Tous les objets partagent la même valeur.
+
+```vb
+Public Shared Property ChaineConnexion As String
+    Get
+        If String.IsNullOrEmpty(_chaineConnexion) Then
+            ' Construction dynamique du chemin
+            Dim cheminBDD As String = IO.Path.Combine(
+                AppDomain.CurrentDomain.BaseDirectory, 
+                _fichierBDD)
+            _chaineConnexion = $"Provider=Microsoft.ACE.OLEDB.12.0;..."
+        End If
+        Return _chaineConnexion
+    End Get
+```
+
+EXPLICATION:
+→ La première fois qu'on appelle ChaineConnexion, elle est construite
+→ Les appels suivants utilisent la valeur mise en cache
+→ Cela évite de recréer la chaîne à chaque fois
+
+CRÉATION AUTOMATIQUE DE LA BASE:
+--------------------------------
+```vb
+Public Shared Sub InitialiserBaseDeDonnees()
+    If Not IO.File.Exists(cheminBDD) Then
+        ' Utilise ADOX (ActiveX Data Objects Extensions)
+        ' pour créer un fichier Access vierge
+        Dim catType As Type = Type.GetTypeFromProgID("ADOX.Catalog")
+        ...
+```
+
+TECHNIQUE: Late Binding (liaison tardive)
+On utilise Type.GetTypeFromProgID pour instancier COM dynamiquement.
+Cela permet de créer un fichier .accdb sans référence externe.
+
+2.2 CLASSE DAL (DAL.vb)
+-----------------------
+
+OBJECTIF: Centraliser toutes les opérations CRUD (Create, Read, Update, Delete)
+
+STRUCTURE: Classes imbriquées
+-----------------------------
+J'ai organisé le DAL en classes imbriquées pour regrouper par entité:
+
+```vb
+Public Class DAL
+    Public Class UtilisateurDAL  → Opérations sur Utilisateurs
+    Public Class FiliereDAL      → Opérations sur Filières
+    Public Class EtudiantDAL     → Opérations sur Étudiants
+    Public Class ReinscriptionDAL → Opérations sur Réinscriptions
+    Public Class PaiementDAL     → Opérations sur Paiements
+    Public Class JournalDAL      → Opérations sur le Journal
+End Class
+```
+
+MÉTHODES GÉNÉRIQUES:
+--------------------
+
+1. ExecuterRequete (INSERT, UPDATE, DELETE)
+```vb
+Public Shared Function ExecuterRequete(
+    sql As String, 
+    parametres As OleDbParameter()
+) As Integer
+```
+
+UTILISATION DU USING:
+---------------------
+```vb
+Using conn As OleDbConnection = Connexion.GetConnection()
+    conn.Open()
+    Using cmd As New OleDbCommand(sql, conn)
+        If parametres IsNot Nothing Then
+            cmd.Parameters.AddRange(parametres)
+        End If
+        Return cmd.ExecuteNonQuery()
+    End Using
+End Using
+```
+
+EXPLICATION DU USING:
+→ Garantit la fermeture automatique de la connexion
+→ Même si une erreur survient, Dispose() est appelé
+→ Évite les fuites de mémoire (memory leaks)
+
+PARAMÈTRES SQL (Protection injection):
+---------------------------------------
+```vb
+Dim params As OleDbParameter() = {
+    New OleDbParameter("@nom", nom),
+    New OleDbParameter("@prenom", prenom)
+}
+```
+
+IMPORTANT: Les paramètres OleDb utilisent "?" et non des noms nommés
+en VB.NET. Mais pour la clarté, je donne des noms aux paramètres.
+
+2. ExecuterRequeteSelect (SELECT)
+---------------------------------
+```vb
+Public Shared Function ExecuterRequeteSelect(
+    sql As String, 
+    parametres As OleDbParameter()
+) As DataTable
+```
+
+UTILISATION DU DATAADAPTER:
+---------------------------
+```vb
+Using da As New OleDbDataAdapter(cmd)
+    Dim dt As New DataTable()
+    da.Fill(dt)
+    Return dt
+End Using
+```
+
+Le DataAdapter remplit le DataTable avec les résultats de la requête.
+C'est plus simple que de lire avec un DataReader ligne par ligne.
+
+JOINTURES SQL:
+--------------
+Exemple avec la méthode GetAll() de EtudiantDAL:
+```vb
+Dim sql As String = "SELECT e.*, f.libelle as nom_filiere " & _
+                   "FROM ETUDIANT e " & _
+                   "LEFT JOIN FILIERE f ON e.id_filiere = f.id_filiere"
+```
+
+EXPLICATION LEFT JOIN:
+→ Retourne tous les étudiants même s'ils n'ont pas de filière
+→ Si pas de correspondance, nom_filiere sera NULL
+→ Évite de perdre des données
+
+RECHERCHE DYNAMIQUE:
+--------------------
+Dans EtudiantDAL.Rechercher():
+```vb
+Dim sql As String = "SELECT ... WHERE 1=1"
+```
+
+ASTUCE: "WHERE 1=1" permet d'ajouter dynamiquement des conditions avec AND
+sans se soucier du premier élément.
+
+```vb
+If Not String.IsNullOrEmpty(terme) Then
+    sql &= " AND (e.nom LIKE ? OR e.prenom LIKE ?)"
+    params.Add(New OleDbParameter("@terme1", "%" & terme & "%"))
+End If
+```
+
+Le "&=" concatène à la chaîne existante.
+Les "%" sont des wildcards pour le LIKE SQL.
+
+================================================================================
+            3. COUCHE MÉTIER (Business)
+================================================================================
+
+3.1 CLASSE ETUDIANTSERVICE
+--------------------------
+
+OBJECTIF: Implémenter les règles métier et validations
+
+VALIDATION DES DONNÉES:
+-----------------------
+```vb
+Public Shared Function ValiderEtudiant(
+    nom As String, 
+    prenom As String, 
+    email As String, 
+    telephone As String, 
+    dateNaissance As Date
+) As List(Of String)
+```
+
+RETOURNE: Une liste d'erreurs (vide si tout est valide)
+
+EXEMPLE DE VALIDATION EMAIL:
+----------------------------
+```vb
+Dim emailPattern As String = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+If Not Regex.IsMatch(email, emailPattern) Then
+    erreurs.Add("L'adresse email n'est pas valide")
+End If
+```
+
+EXPLICATION DE L'EXPRESSION RÉGULIÈRE:
+→ ^ : Début de la chaîne
+→ [a-zA-Z0-9._%+-]+ : Caractères autorisés avant @ (au moins 1)
+→ @ : Le symbole arobase
+→ [a-zA-Z0-9.-]+ : Domaine (lettres, chiffres, points, tirets)
+→ \. : Un point littéral (échappé)
+→ [a-zA-Z]{2,} : Extension (au moins 2 lettres)
+→ $ : Fin de la chaîne
+
+CALCUL DU SOLDE:
+----------------
+```vb
+Public Shared Function CalculerSolde(
+    idEtudiant As Integer, 
+    fraisTotal As Decimal
+) As Decimal
+```
+
+ALGORITHME:
+1. Récupère tous les paiements de l'étudiant
+2. Additionne les montants des paiements "complet" et "partiel"
+3. Soustrait du total des frais
+4. Retourne le reste dû
+
+VÉRIFICATION DES PRÉREQUIS:
+---------------------------
+```vb
+Public Shared Function PeutPasserNiveauSup(idEtudiant As Integer) As Boolean
+    Dim dernierNiveau As Integer = DAL.ReinscriptionDAL.GetDerniereNiveau(idEtudiant)
+    
+    ' Vérifier si l'étudiant n'est pas déjà au niveau maximum
+    If dernierNiveau >= 5 Then
+        Return False
+    End If
+    
+    ' Vérifier les paiements
+    Return Not ADesPaiementsEnAttente(idEtudiant)
+End Function
+```
+
+LOGIQUE: Un étudiant peut passer au niveau supérieur si:
+- Il n'est pas déjà au niveau 5 (maximum)
+- Il n'a pas de paiements en attente
+
+STATISTIQUES AVANCÉES:
+----------------------
+```vb
+Public Shared Function GetStatistiques(idEtudiant As Integer) 
+    As Dictionary(Of String, Object)
+```
+
+UTILISATION D'UN DICTIONNAIRE:
+→ Clé: Nom de la statistique (String)
+→ Valeur: La valeur (Object = n'importe quel type)
+→ Permet de retourner des données hétérogènes
+
+3.2 CLASSE PAIEMENTSERVICE
+--------------------------
+
+DÉTERMINATION DU STATUT:
+------------------------
+```vb
+Public Shared Function DeterminerStatut(
+    montantPaye As Decimal, 
+    montantAttendu As Decimal
+) As String
+    If montantPaye >= montantAttendu Then
+        Return "complet"
+    ElseIf montantPaye > 0 Then
+        Return "partiel"
+    Else
+        Return "en_attente"
+    End If
+End Function
+```
+
+LOGIQUE:
+→ Si montant payé ≥ attendu: paiement complet
+→ Si montant payé > 0 mais < attendu: partiel
+→ Sinon (0): en attente
+
+================================================================================
+            4. MODÈLES DE DONNÉES (Models)
+================================================================================
+
+4.1 CLASSE UTILISATEURCONNECTE
+------------------------------
+
+OBJECTIF: Gérer la session de l'utilisateur connecté
+
+DESIGN PATTERN: Singleton (instance unique partagée)
+----------------------------------------------------
+Toutes les propriétés sont Shared (statiques), donc il n'y a qu'une seule
+copie des données quel que soit le nombre d'instances.
+
+```vb
+Private Shared _id As Integer
+Private Shared _login As String = ""
+```
+
+Accès depuis n'importe où:
+```vb
+Models.UtilisateurConnecte.Login
+```
+
+VÉRIFICATION DU RÔLE:
+---------------------
+```vb
+Public Shared ReadOnly Property IsAdministrateur As Boolean
+    Get
+        Return _role = "administrateur"
+    End Get
+End Property
+```
+
+UTILISATION: Pour contrôler l'accès aux fonctionnalités
+```vb
+If Models.UtilisateurConnecte.IsAdministrateur Then
+    ' Afficher les boutons admin
+End If
+```
+
+4.2 CLASSE CONFIGURATION
+------------------------
+
+OBJECTIF: Centraliser les paramètres modifiables
+
+PROPRIÉTÉS SHARED:
+------------------
+```vb
+Public Shared Property FraisInscription As Decimal = 50000
+Public Shared Property FraisScolariteNiveau1 As Decimal = 150000
+```
+
+AVANTAGE: Modifiable sans recompiler
+→ On peut changer les valeurs dans le code
+→ Ou les charger depuis un fichier de config
+
+MÉTHODE DE CALCUL:
+------------------
+```vb
+Public Shared Function CalculerTotalFrais(
+    niveau As Integer, 
+    Optional avecMateriel As Boolean = False, 
+    Optional avecExamen As Boolean = False
+) As Decimal
+```
+
+PARAMÈTRES OPTIONNELS:
+→ Optional: Le paramètre peut être omis
+→ = False: Valeur par défaut si omis
+
+================================================================================
+            5. UTILITAIRES (Helpers)
+================================================================================
+
+5.1 CLASSE SECURITYHELPER
+-------------------------
+
+HASHAGE SHA256:
+---------------
+```vb
+Public Shared Function HashPassword(password As String) As String
+    Using sha256 As SHA256 = SHA256.Create()
+        ' Ajouter un salt (grain de sel) pour sécuriser
+        Dim salt As String = "ENSIT_GestionEcole_2025"
+        Dim combined As String = password & salt
+        
+        Dim bytes As Byte() = Encoding.UTF8.GetBytes(combined)
+        Dim hash As Byte() = sha256.ComputeHash(bytes)
+        
+        Return Convert.ToBase64String(hash)
+    End Using
+End Function
+```
+
+CONCEPTS DE SÉCURITÉ:
+→ Salt: Chaîne aléatoire ajoutée au mot de passe
+  → Empêche les attaques par tables arc-en-ciel
+  → Même mot de passe = hash différent avec salt différent
+→ SHA256: Algorithme de hachage cryptographique
+  → Irréversible (on ne peut pas retrouver le mot de passe)
+  → 256 bits de sortie (32 octets)
+→ Base64: Encodage pour stocker le hash en texte
+
+5.2 CLASSE VALIDATIONHELPER
+---------------------------
+
+VALIDATION D'EMAIL:
+-------------------
+```vb
+Public Shared Function IsValidEmail(email As String) As Boolean
+    Try
+        Dim addr As New System.Net.Mail.MailAddress(email)
+        Return addr.Address = email
+    Catch
+        Return False
+    End Try
+End Function
+```
+
+TECHNIQUE: Try-Catch
+→ Essaie de créer un objet MailAddress
+→ Si ça échoue (Catch), l'email est invalide
+→ Plus fiable qu'une regex simple
+
+5.3 CLASSE FORMATHHELPER
+------------------------
+
+FORMATAGE MONÉTAIRE:
+--------------------
+```vb
+Public Shared Function FormatCurrency(montant As Decimal) As String
+    Return String.Format("{0:N0} FCFA", montant)
+End Function
+```
+
+EXPLICATION:
+→ {0:N0}: Formate le nombre avec séparateur de milliers, 0 décimales
+→ Ex: 150000 → "150 000 FCFA"
+
+================================================================================
+            6. INTERFACE UTILISATEUR (Forms)
+================================================================================
+
+6.1 ARCHITECTURE MDI (Multiple Document Interface)
+--------------------------------------------------
+
+CONCEPT:
+→ Une fenêtre parente (MainForm) contient des fenêtres enfants
+→ Les formulaires enfants ne peuvent pas sortir du parent
+→ Permet de gérer plusieurs fenêtres simultanément
+
+IMPLÉMENTATION:
+---------------
+Dans MainForm:
+```vb
+Me.IsMdiContainer = True
+```
+
+Ouverture d'un formulaire enfant:
+```vb
+Dim form As New EtudiantForm()
+form.MdiParent = Me  ' Définit MainForm comme parent
+form.Show()
+```
+
+6.2 GESTION DES RÔLES
+---------------------
+
+ACTIVATION/DÉSACTIVATION DES CONTRÔLES:
+---------------------------------------
+```vb
+If Not Models.UtilisateurConnecte.IsAdministrateur Then
+    btnSupprimer.Enabled = False
+    btnSupprimer.Visible = False
+End If
+```
+
+Ou suppression complète:
+```vb
+If Not Models.UtilisateurConnecte.IsAdministrateur Then
+    btnSupprimer.Parent.Controls.Remove(btnSupprimer)
+End If
+```
+
+================================================================================
+            7. SÉCURITÉ ET VALIDATION
+================================================================================
+
+7.1 PROTECTION CONTRE INJECTION SQL
+-----------------------------------
+
+MÉTHODE: Paramètres SQL (toujours!)
+-----------------------------------
+```vb
+' DANGEREUX (NE JAMAIS FAIRE ÇA):
+Dim sql As String = "SELECT * FROM ETUDIANT WHERE nom = '" & nom & "'"
+```
+
+Si nom = "'; DROP TABLE ETUDIANT; --"
+→ La requête devient: SELECT * FROM ETUDIANT WHERE nom = ''; 
+  DROP TABLE ETUDIANT; --'
+→ Résultat: Table supprimée!
+
+SÉCURISÉ:
+---------
+```vb
+Dim sql As String = "SELECT * FROM ETUDIANT WHERE nom = ?"
+Dim params As OleDbParameter() = {
+    New OleDbParameter("@nom", nom)
+}
+```
+
+Le paramètre est traité comme une valeur, pas comme du code SQL.
+
+7.2 JOURNALISATION DES ACTIONS
+------------------------------
+
+OBJECTIF: Tracer toutes les actions importantes
+
+```vb
+Public Shared Sub EnregistrerAction(
+    idUtilisateur As Integer, 
+    action As String, 
+    description As String)
+```
+
+EXEMPLES D'UTILISATION:
+→ Connexion/Déconnexion
+→ Ajout/Modification/Suppression d'étudiant
+→ Enregistrement de paiement
+→ Modification de mot de passe
+
+================================================================================
+            8. EXPORTS ET RAPPORTS
+================================================================================
+
+8.1 EXPORT EXCEL AVEC NPOI
+--------------------------
+
+AVANTAGE DE NPOI:
+→ Ne nécessite pas Excel installé
+→ Fonctionne sur serveur sans interface graphique
+→ Gratuit et open source
+
+CRÉATION D'UN CLASSEUR:
+-----------------------
+```vb
+Dim workbook As New NPOI.XSSF.UserModel.XSSFWorkbook()
+```
+
+XSSF = Format Excel 2007+ (.xlsx)
+HSSF = Format Excel 97-2003 (.xls)
+
+CRÉATION D'UNE FEUILLE:
+-----------------------
+```vb
+Dim sheet As NPOI.SS.UserModel.ISheet = workbook.CreateSheet("NomFeuille")
+```
+
+STYLES:
+-------
+```vb
+Dim headerStyle As NPOI.SS.UserModel.ICellStyle = workbook.CreateCellStyle()
+headerStyle.FillForegroundColor = NPOI.SS.UserModel.IndexedColors.Grey25Percent.Index
+headerStyle.FillPattern = NPOI.SS.UserModel.FillPattern.SolidForeground
+```
+
+SAUVEGARDE:
+-----------
+```vb
+Using fs As New System.IO.FileStream(fileName, System.IO.FileMode.Create)
+    workbook.Write(fs)
+End Using
+```
+
+================================================================================
+            9. TECHNIQUES AVANCÉES
+================================================================================
+
+9.1 GÉNÉRATION DE NUMÉROS UNIQUES
+---------------------------------
+
+```vb
+Public Shared Function GenererNumeroInscription() As String
+    Dim annee As String = DateTime.Now.Year.ToString()
+    Dim random As New Random()
+    Dim numero As String = $"ETU-{annee}-{random.Next(1000, 9999)}"
+    Return numero
+End Function
+```
+
+INTERPOLATION DE CHAÎNES ($):
+→ $"ETU-{annee}-{random.Next(1000, 9999)}"
+→ Plus lisible que la concaténation
+→ Variables entre {} sont évaluées
+
+9.2 REQUÊTES SQL AVANCÉES
+-------------------------
+
+SOUS-REQUÊTE POUR LE DERNIER NIVEAU:
+------------------------------------
+```vb
+SELECT niveau 
+FROM REINSCRIPTION 
+WHERE id_etudiant = ? 
+ORDER BY id_reinscription DESC
+```
+
+ORDER BY DESC: Du plus récent au plus ancien
+TOP 1: Prend seulement le premier résultat
+
+JOINTURE AVEC SOUS-REQUÊTE:
+---------------------------
+```vb
+SELECT e.*, f.libelle as nom_filiere, r.niveau as niveau_actuel 
+FROM ETUDIANT e 
+LEFT JOIN FILIERE f ON e.id_filiere = f.id_filiere 
+LEFT JOIN (
+    SELECT id_etudiant, niveau 
+    FROM REINSCRIPTION 
+    WHERE id_reinscription IN (
+        SELECT MAX(id_reinscription) 
+        FROM REINSCRIPTION 
+        GROUP BY id_etudiant
+    )
+) r ON e.id_etudiant = r.id_etudiant
+```
+
+Cette requête récupère le dernier niveau de chaque étudiant
+en utilisant une sous-requête corrélée.
+
+9.3 GESTION DES ERREURS
+-----------------------
+
+TRY-CATCH-FINALLY:
+------------------
+```vb
+Try
+    ' Code risqué
+    conn.Open()
+    cmd.ExecuteNonQuery()
+Catch ex As OleDbException
+    ' Erreur spécifique à la base de données
+    MessageBox.Show("Erreur base de données: " & ex.Message)
+Catch ex As Exception
+    ' Toute autre erreur
+    MessageBox.Show("Erreur: " & ex.Message)
+Finally
+    ' Toujours exécuté (fermeture connexion)
+    If conn IsNot Nothing AndAlso conn.State = ConnectionState.Open Then
+        conn.Close()
+    End If
+End Try
+```
+
+BONNE PRATIQUE:
+→ Toujours capturer les exceptions spécifiques d'abord
+→ Exception générale à la fin
+→ Finally pour le nettoyage (ou Using)
+
+================================================================================
+            CONCLUSION
+================================================================================
+
+CE QUE J'AI APPORTÉ:
+--------------------
+✓ Architecture professionnelle en 5 couches
+✓ Sécurité renforcée (hashage SHA256, validation)
+✓ Code propre et documenté
+✓ Séparation des responsabilités
+✓ Réutilisabilité et maintenabilité
+✓ Gestion des erreurs robuste
+✓ Performance optimisée (connexions, requêtes)
+
+POINTS CLÉS À RETENIR:
+----------------------
+1. Toujours utiliser des paramètres SQL (sécurité)
+2. Utiliser Using pour les ressources (connexions, fichiers)
+3. Séparer la logique métier de l'interface
+4. Valider les données avant traitement
+5. Logger les actions importantes
+6. Gérer les erreurs avec Try-Catch
+
+RESSOURCES SUPPLÉMENTAIRES:
+---------------------------
+→ Documentation .NET: https://docs.microsoft.com/dotnet/
+→ NPOI GitHub: https://github.com/nissl-lab/npoi
+→ SQL Tutorial: https://www.w3schools.com/sql/
+
+================================================================================
+                           FIN DE LA DOCUMENTATION
+================================================================================
+
+Ce document explique en détail comment j'ai conçu et codé ce projet.
+Chaque section présente les concepts, techniques et bonnes pratiques utilisées.
+
+Pour toute question ou clarification, se référer au code source commenté
+ou consulter la documentation officielle des technologies utilisées.
